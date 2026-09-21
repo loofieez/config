@@ -1,0 +1,17 @@
+auto_sync = false
+update_check = false
+search_mode = "daemon-fuzzy"
+workspaces = true
+style = "auto"
+invert = true
+inline_height = 25
+max_preview_height = 6
+auto_hide_height = 10
+history_format = "{time}\t{command}\t{duration}\t{directory}"
+
+[keys]
+scroll_exits = false
+
+[daemon]
+enabled = true
+autostart = true

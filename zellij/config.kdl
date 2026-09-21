@@ -1,351 +1,546 @@
+// ~/.config/zellij/config.kdl
+// zellij final config (modified)
+
+// important:
+// there are three types of keybinds:
+// shared keys, mode keys, and option keys
+// shared keys look like `Ctrl + g`
+// mode keys look like `Ctrl + p`
+// option keys look like `c`
+
+// scenario:
+// here's how the keybinds work
+// suppose you want to create a stacked pane
+// first use the `shared keys`, then the `mode keys`, and finally the `option keys`
+
+// meaning:
+// first unlock the mode from `locked` to `normal`
+// then choose your mode, which is `pane`
+// and finally send the option key, which is `stacked`
+
+// example:
+// ctrl + g , p , s
+// press `ctrl + g` consecutively to unlock the mode to `normal`
+// then send `p` to set the mode to `pane`
+// and finally send `s`, the option key for a stacked pane
+// in comments, I write this as: `ctrl + g , p , s`
+
+// set to true, to use fresh keybinds
 keybinds clear-defaults=true {
+
+    // mode: locked
     locked {
+        // key: `ctrl + g`
+        // switch to normal mode
         bind "Ctrl g" {
             SwitchToMode "normal";
         }
     }
 
+    // mode: pane
     pane {
+
+        // key: `ctrl + g , p , left`
+        // move focus to left pane
         bind "left" {
             MoveFocus "left";
         }
 
+        // key: `ctrl + g , p , down`
+        // move focus to down pane
         bind "down" {
             MoveFocus "down";
         }
 
+        // key: `ctrl + g , p , up`
+        // move focus to up pane
         bind "up" {
             MoveFocus "up";
         }
 
+        // key: `ctrl + g , p , right`
+        // move focus to right pane
         bind "right" {
             MoveFocus "right";
         }
 
+        // key: `ctrl + g , p , ;`
+        // move focus to last opened pane
         bind ";" {
             FocusLastPane;
         }
 
+        // key: `ctrl + g , p , c`
+        // rename focused pane
         bind "c" {
             SwitchToMode "renamepane";
             PaneNameInput 0;
         }
 
+        // key: `ctrl + g , p , d`
+        // create new pane down and move focus
         bind "d" {
             NewPane "down";
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , e`
+        // toggle pane to floating or embed
         bind "e" {
             TogglePaneEmbedOrFloating;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , f`
+        // toggle pane to fullscreen
         bind "f" {
             ToggleFocusFullscreen;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , shift + f`
+        // toggle pane to fullscreen but with no ui
         bind "Shift f" {
             ToggleFocusNoUiFullscreen;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , h`
+        // move focus to left pane
         bind "h" {
             MoveFocus "left";
         }
 
+        // key: `ctrl + g , p , i`
+        // pin floating pane
         bind "i" {
             TogglePanePinned;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , j`
+        // move focus to down pane
         bind "j" {
             MoveFocus "down";
         }
 
+        // key: `ctrl + g , p , k`
+        // move focus to up pane
         bind "k" {
             MoveFocus "up";
         }
 
+        // key: `ctrl + g , p , l`
+        // move focus to right pane
         bind "l" {
             MoveFocus "right";
         }
 
+        // key: `ctrl + g , p , n`
+        // create new pane
         bind "n" {
             NewPane;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p`
+        // switch to pane mode (entrypoint)
         bind "p" {
             SwitchToMode "normal";
         }
 
+        // key: `ctrl + g , p , r`
+        // create new pane to right
         bind "r" {
             NewPane "right";
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , s`
+        // create new stacked pane
         bind "s" {
             NewPane "stacked";
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , w`
+        // toggle inbuilt floating pane
         bind "w" {
             ToggleFloatingPanes;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , x`
+        // close focused pane
         bind "x" {
             CloseFocus;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , z`
+        // toggle pane frames
         bind "z" {
             TogglePaneFrames;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , p , tab`
+        // switch focused to closest pane
         bind "tab" {
             SwitchFocus;
         }
     }
 
+    // mode: tab
     tab {
+
+         // key: `ctrl + g , t , left`
+         // switch to previous tab
         bind "left" {
             GoToPreviousTab;
         }
 
+        // key: `ctrl + g , t , down`
+        // switch to next tab
         bind "down" {
             GoToNextTab;
         }
 
+        // key: `ctrl + g , t , up`
+        // switch to previous tab
         bind "up" {
             GoToPreviousTab;
         }
 
+        // key: `ctrl + g , t , right`
+        // switch to next tab
         bind "right" {
             GoToNextTab;
         }
 
+        // key: `ctrl + g , t , 1`
+        // switch to tab no. 1
         bind "1" {
             GoToTab 1;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 2`
+        // switch to tab no. 2
         bind "2" {
             GoToTab 2;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 3`
+        // switch to tab no. 3
         bind "3" {
             GoToTab 3;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 4`
+        // switch to tab no. 4
         bind "4" {
             GoToTab 4;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 5`
+        // switch to tab no. 5
         bind "5" {
             GoToTab 5;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 6`
+        // switch to tab no. 6
         bind "6" {
             GoToTab 6;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 7`
+        // switch to tab no. 7
         bind "7" {
             GoToTab 7;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 8`
+        // switch to tab no. 8
         bind "8" {
             GoToTab 8;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , 9`
+        // switch to tab no. 9
         bind "9" {
             GoToTab 9;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , [`
+        // break focused pane to new tab in left
         bind "[" {
             BreakPaneLeft;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , ]`
+        // break focused pane to new tab in right
         bind "]" {
             BreakPaneRight;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , b`
+        // break focused pane to new tab
         bind "b" {
             BreakPane;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , h`
+        // move focus to previous tab
         bind "h" {
             GoToPreviousTab;
         }
 
+        // key: `ctrl + g , t , j`
+        // move focus to next tab
         bind "j" {
             GoToNextTab;
         }
 
+        // key: `ctrl + g , t , k`
+        // move focus to previous tab
         bind "k" {
             GoToPreviousTab;
         }
 
+        // key: `ctrl + g , t , l`
+        // move focus to next tab
         bind "l" {
             GoToNextTab;
         }
 
+        // key: `ctrl + g , t , n`
+        // create a new tab
         bind "n" {
             NewTab;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , r`
+        // rename active tab
         bind "r" {
             SwitchToMode "renametab";
             TabNameInput 0;
         }
 
+        // key: `ctrl + g , t , s`
+        // toggle input sync between panes in active tab
         bind "s" {
             ToggleActiveSyncTab;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , t`
+        // switch to tab mode (entrypoint)
         bind "t" {
             SwitchToMode "normal";
         }
 
+        // key: `ctrl + g , t , x`
+        // close active tab
         bind "x" {
             CloseTab;
             SwitchToMode "locked";
         }
 
+        // key: `ctrl + g , t , tab`
+        // change the tab focus
         bind "tab" {
             ToggleTab;
         }
     }
 
+    // mode: resize
     resize {
+
+        // key: `ctrl + g , r , left`
+        // increase size in left direction
         bind "left" {
             Resize "Increase left";
         }
 
+        // key: `ctrl + g , r , down`
+        // increase size in down direction
         bind "down" {
             Resize "Increase down";
         }
 
+        // key: `ctrl + g , r , up`
+        // increase size in up direction
         bind "up" {
             Resize "Increase up";
         }
 
+        // key: `ctrl + g , r , right`
+        // increase size in right direction
         bind "right" {
             Resize "Increase right";
         }
 
+        // key: `ctrl + g , r , +`
+        // increase size
         bind "+" {
             Resize "Increase";
         }
 
+        // key: `ctrl + g , r , -`
+        // decrease size
         bind "-" {
             Resize "Decrease";
         }
 
+        // key: `ctrl + g , r , H`
+        // decrease size in left direction
         bind "H" {
             Resize "Decrease left";
         }
 
+        // key: `ctrl + g , r , J`
+        // decrease size in down direction
         bind "J" {
             Resize "Decrease down";
         }
 
+        // key: `ctrl + g , r , K`
+        // decrease size in up direction
         bind "K" {
             Resize "Decrease up";
         }
 
+        // key: `ctrl + g , r , L`
+        // decrease size in right direction
         bind "L" {
             Resize "Decrease right";
         }
 
+        // key: `ctrl + g , r , h`
+        // increase size in left direction
         bind "h" {
             Resize "Increase left";
         }
 
+        // key: `ctrl + g , r , j`
+        // increase size in down direction
         bind "j" {
             Resize "Increase down";
         }
 
+        // key: `ctrl + g , r , k`
+        // increase size in up direction
         bind "k" {
             Resize "Increase up";
         }
 
+        // key: `ctrl + g , r , l`
+        // increase size in right direction
         bind "l" {
             Resize "Increase right";
         }
 
+        // key: `ctrl + g , r`
+        // switch to resize mode (entrypoint)
         bind "r" {
             SwitchToMode "normal";
         }
     }
 
+    // mode: move
     move {
+
+        // key: `ctrl + g , m , left`
+        // move pane in left direction
         bind "left" {
             MovePane "left";
         }
 
+        // key: `ctrl + g , m , down`
+        // move pane in down direction
         bind "down" {
             MovePane "down";
         }
 
+        // key: `ctrl + g , m , up`
+        // move pane in up direction
         bind "up" {
             MovePane "up";
         }
 
+        // key: `ctrl + g , m , right`
+        // move pane in right direction
         bind "right" {
             MovePane "right";
         }
 
+        // key: `ctrl + g , m , h`
+        // move pane in left direction
         bind "h" {
             MovePane "left";
         }
 
+        // key: `ctrl + g , m , j`
+        // move pane in down direction
         bind "j" {
             MovePane "down";
         }
 
+        // key: `ctrl + g , m , k`
+        // move pane in up direction
         bind "k" {
             MovePane "up";
         }
 
+        // key: `ctrl + g , m , l`
+        // move pane in right direction
         bind "l" {
             MovePane "right";
         }
 
+        // key: `ctrl + g , m`
+        // switch to move mode (entrypoint)
         bind "m" {
             SwitchToMode "normal";
         }
 
+        // key: `ctrl + g , m , n`
+        // move focused pane
         bind "n" {
             MovePane;
         }
 
+        // key: `ctrl + g , m , p`
+        // move pane in back direction
         bind "p" {
             MovePaneBackwards;
         }
 
+        // key: `ctrl + g , m , tab`
+        // move focused pane
         bind "tab" {
             MovePane;
         }
     }
 
+    // unknown mode for me
+    // i will add this section later
     scroll {
+
         bind "Alt left" {
             MoveFocusOrTab "left";
             SwitchToMode "locked";
@@ -406,23 +601,35 @@ keybinds clear-defaults=true {
         }
     }
 
+    // mode: search
     search {
+
+        // key: `ctrl + g , s , c`
+        // toggle CaseSensitivity option
         bind "c" {
             SearchToggleOption "CaseSensitivity";
         }
 
+        // key: `ctrl + g , s , n`
+        // search next/down occur
         bind "n" {
             Search "down";
         }
 
+        // key: `ctrl + g , s , o`
+        // search whole word
         bind "o" {
             SearchToggleOption "WholeWord";
         }
 
+        // key: `ctrl + g , s , p`
+        // search previous/up occur
         bind "p" {
             Search "up";
         }
 
+        // key: `ctrl + g , s , w`
+        // toggle search wrap
         bind "w" {
             SearchToggleOption "Wrap";
         }
@@ -716,27 +923,29 @@ plugins {
     tab-bar location="zellij:tab-bar"
 }
 
-simplified_ui false
-osc8_hyperlinks false
 theme "catppuccin-frappe"
 default_mode "locked"
 default_shell "fish"
 default_cwd "~/src/remote"
 default_layout "default"
+attach_to_session true
+on_force_close "detach"
 mouse_mode true
 pane_frames true
 pane_frame_styles "titles"
 mirror_session false
-on_force_close "quit"
+copy_on_select false
 scroll_buffer_size 10000
-copy_command "pbcopy"
-copy_on_select true
 scrollback_editor "/opt/homebrew/bin/nvim"
-attach_to_session true
 session_serialization true
-serialize_pane_viewport true
+serialize_pane_viewport false
 serialization_interval 10800
 show_startup_tips false
 show_release_notes false
 focus_follows_mouse true
 mouse_click_through true
+web_server false
+web_sharing "disabled"
+copy_clipboard "system"
+session_name "main"
+layout_dir "~/.config/zellij/layouts"

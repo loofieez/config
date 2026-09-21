@@ -1,3 +1,6 @@
+# ~/src/remote/config/.gitattributes
+# this project specific gitattributes
+
 # hide html from linguist detection
-# because, files are encrypted via sops
+# bcz, files are encrypted via sops
 bookmarks/** -linguist-detectable

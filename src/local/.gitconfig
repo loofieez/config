@@ -1,8 +1,8 @@
-# ~/projects/local/.gitconfig
-# git config for local repositories
+# ~/src/local/.gitconfig
+# git config for local repos
 
 # user
 [user]
-    name = "loofieez"
-    # public email for commits
-    email = "loofieez@local.mac"
+  name = "loofieez"
+  # public email for commits
+  email = "loofieez@local.mac"

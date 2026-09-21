@@ -1,4 +1,4 @@
-.rough/**
+# ~/.gitignore
+# global gitignore
+
 **/.DS_Store
-**/graph.json
-**/workspace.json

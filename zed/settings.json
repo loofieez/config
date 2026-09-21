@@ -7,31 +7,34 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
-  "vim_mode": true,
-  "icon_theme": "Catppuccin Latte",
-  "auto_update": false,
+  "project_panel": {
+    "dock": "left"
+  },
+  "icon_theme": "Catppuccin Frappé",
+  "ensure_final_newline_on_save": false,
+  "ui_font_family": "Iosevka Nerd Font",
+  "buffer_font_family": "Iosevka Nerd Font Mono",
+  "show_edit_predictions": false,
   "agent": {
+    "auto_compact": {
+      "enabled": false
+    },
+    "show_merge_conflict_indicator": false,
+    "cancel_generation_on_terminal_stop": false,
+    "expand_terminal_card": false,
+    "expand_edit_card": false,
     "favorite_models": [],
     "model_parameters": [],
     "enable_feedback": false
   },
   "disable_ai": true,
-  "autosave": "on_focus_change",
-  "format_on_save": "modifications",
-  "ensure_final_newline_on_save": false,
+  "vim_mode": true,
   "telemetry": {
     "diagnostics": false,
     "metrics": false,
     "anthropic_retention": false
   },
-  "project_panel": {
-    "dock": "left"
-  },
   "ui_font_size": 16,
   "buffer_font_size": 15,
-  "theme": {
-    "mode": "system",
-    "light": "Catppuccin Latte",
-    "dark": "One Dark",
-  },
+  "theme": "Catppuccin Frappé",
 }

@@ -8,15 +8,15 @@ Include ~/.ssh/1Password/config
 
 # global block
 Host *
-    ServerAliveInterval 300
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
-    # set 1Password as ssh-agent
-    IdentityAgent ~/.1Password/agent.sock
+  ServerAliveInterval 300
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  # set 1Password as ssh-agent
+  IdentityAgent ~/.1Password/agent.sock
 
 # github config
 Host github.com
-    User git
-    IdentitiesOnly yes
-    HostName github.com
-    IdentityFile ~/.ssh/remote/auth.pub
+  User git
+  IdentitiesOnly yes
+  HostName github.com
+  IdentityFile ~/.ssh/remote/auth.pub

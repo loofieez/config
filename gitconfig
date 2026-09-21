@@ -1,22 +1,22 @@
 # ~/.gitconfig
-# global git config
+# global gitconfig
 
 # core
 [core]
-    # set neovim as editor
-    editor = nvim
-    # preserve exec file-perm
-    fileMode = true
+  # set neovim as editor
+  editor = nvim
+  # preserve exec file-perm
+  fileMode = true
 
 # init
 [init]
-    # set default branch to main
-    defaultBranch = main
+  # set default branch to main
+  defaultBranch = main
 
-# working directory for remote projects
-[includeif "gitdir:~/projects/remote/"]
-    path = ~/projects/remote/.gitconfig
+# for remote projects
+[includeif "gitdir:~/src/remote/"]
+  path = ~/src/remote/.gitconfig
 
-# working directory for local projects
-[includeif "gitdir:~/projects/local/"]
-    path = ~/projects/local/.gitconfig
+# for local projects
+[includeif "gitdir:~/src/local/"]
+  path = ~/src/local/.gitconfig
