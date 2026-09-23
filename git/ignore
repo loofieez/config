@@ -1,0 +1,4 @@
+# ~/.config/git/ignore
+# global gitignore
+
+**/.DS_Store

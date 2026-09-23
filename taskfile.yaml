@@ -1,0 +1,148 @@
+---
+# ~/src/remote/config/taskfile.yaml
+# remote/config pecific taskfile (single)
+
+version: "3"
+
+shell:
+  command: fish
+  args:
+    - -c
+
+env:
+  SSH_DIR: "{{.HOME}}/.ssh"
+  CONFIG_DIR: "{{.HOME}}/.config"
+  DOTFILES: "{{.USER_WORKING_DIR}}"
+
+vars:
+  METHOD: checksum
+  TOOLS: [fish, zellij]
+  PKGS: [fish, zed, zellij, fd]
+
+tasks:
+  default:
+    desc: "list active tasks"
+    cmds:
+      - task --list
+    silent: false
+
+  postinstall:
+    desc: "post-install config"
+    internal: true
+    cmds:
+      - echo "post-install done"
+
+  secure:
+    desc: "harden permissions"
+    cmds:
+      - chmod 700 {{.SSH_DIR}}
+      - echo "permission hardened"
+
+  link:
+    desc: "link xdg symlinks"
+    matrix:
+      tool: "{{.TOOLS}}"
+    cmds:
+      - mkdir -p {{.CONFIG_DIR}}/{{.tool}}
+      - ln -sfn {{.DOTFILES}}/{{.tool}} {{.CONFIG_DIR}}/{{.tool}}
+
+  unlink:
+    desc: "remove xdg symlinks"
+    matrix:
+      tool: "{{.TOOLS}}"
+    cmds:
+      - rm -rfv {{.CONFIG_DIR}}/{{.tool}}
+
+  relink:
+    desc: "recreate xdg symlinks"
+    deps:
+      - unlink
+      - link
+
+  setup:
+    desc: "bootstrap dotfiles"
+    deps:
+      - secure
+      - link
+      - install
+    cmds:
+      - task: postinstall
+    preconditions:
+      - sh: test -d {{.CONFIG_DIR}}
+        msg: "config directory not found"
+
+  lock:
+    desc: "set config read-only"
+    cmds:
+      - chmod -R u+w {{.DOTFILES}}/.git
+      - chmod -R a-w {{.DOTFILES}}
+      - echo "config locked (read-only)"
+
+  unlock:
+    desc: "set config writable"
+    cmds:
+      - chmod -R u+w {{.DOTFILES}}
+      - echo "config unlocked (writable)"
+
+  brew:pkg:install:
+    desc: "install brew pkgs"
+    matrix:
+      pkg: "{{.PKGS}}"
+    cmds:
+      - brew install {{.pkg}}
+
+  brew:pkg:update:
+    desc: "update, and upgrade brew pkgs"
+    cmds:
+      - brew update
+      - brew upgrade
+      - brew cleanup
+      - brew autoremove
+
+  brew:bundle:check:
+    desc: "check brew pkgs"
+    cmds:
+      - brew bundle check --file={{.DOTFILES}}/Brewfile
+
+  brew:bundle:install:
+    desc: "install brew pkgs"
+    cmds:
+      - brew bundle --file={{.DOTFILES}}/Brewfile --debug --verbose
+
+  brew:pin:
+    desc: "pin brew pkgs"
+    matrix:
+      pkg: "{{.PKGS}}"
+    cmds:
+      - brew pin {{.pkg}}
+
+  brew:unpin:
+    desc: "unpin brew pkgs"
+    matrix:
+      pkg: "{{.PKGS}}"
+    cmds:
+      - brew unpin {{.pkg}}
+
+  backup:diff:
+    desc: "show diff/staged changes"
+    cmds:
+      - git -C {{.DOTFILES}} diff --cached
+
+  backup:config:
+    desc: "backup configs"
+    cmds:
+      - task: unlock
+      - for:
+          var: tool
+          list: "{{.TOOLS}}"
+        cmd: cp -rv {{.CONFIG_DIR}}/{{.tool}} {{.DOTFILES}}/
+      - git -C {{.DOTFILES}} add -A
+      - task: backup:diff
+
+  watch:
+    desc: "watch for changes"
+    watch: true
+    sources:
+      - "{{.DOTFILES}}/*"
+    cmds:
+      - task: relink

@@ -1,3 +1,6 @@
+# ~/.config/atuin/config.toml
+# atuin configuration
+
 auto_sync = false
 update_check = false
 search_mode = "daemon-fuzzy"

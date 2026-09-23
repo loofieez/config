@@ -1,6 +1,9 @@
 #!/usr/bin/env fish
 
-# exported variables for utils
+# ~/.config/fish/conf.d/20-tool.fish
+# bunch of exported variables for tools
+
+# exported variables for man
 set --global --export MANROFFOPT "-c"
 set --global --export MANPAGER "bat -l man -p"
 

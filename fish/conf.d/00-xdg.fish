@@ -1,17 +1,18 @@
 #!/usr/bin/env fish
 
-# ~/.config/fish/conf.d/a-xdg.fish
-# config for exported paths or variables.
+# ~/.config/fish/conf.d/00-xdg.fish
+# bunch of global exported variables
 
+# important exported variables
 set --global --export VISUAL "zed"
 set --global --export EDITOR "nvim"
 set --global --export LESSHISTFILE -
 
-# exported variables for code, and lang.
+# exported variables for coding
 set --global --export GOROOT "$HOME/.goroot"
 set --global --export GOHOME "$HOME/.gopath"
 
-# default variables
+# xdg default variables
 set --global --export XDG_CACHE_HOME "$HOME/.cache"
 set --global --export XDG_CONFIG_HOME "$HOME/.config"
 set --global --export XDG_DATA_HOME "$HOME/.local/share"

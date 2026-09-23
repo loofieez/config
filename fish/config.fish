@@ -8,3 +8,4 @@ end
 
 # set `catppuccin-frappe` theme
 fish_config theme choose catppuccin-frappe
+# fish_config theme choose catppuccin-latte

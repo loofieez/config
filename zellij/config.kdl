@@ -1,660 +1,791 @@
 // ~/.config/zellij/config.kdl
 // zellij final config (modified)
 
-// important:
-// there are three types of keybinds:
-// shared keys, mode keys, and option keys
-// shared keys look like `Ctrl + g`
-// mode keys look like `Ctrl + p`
-// option keys look like `c`
+// The file has two halves:
+//   1. `keybinds { ... }`  -> which key does what, per input mode
+//   2. top-level options   -> global behaviour (theme, mouse, plugins, ...)
 
-// scenario:
-// here's how the keybinds work
-// suppose you want to create a stacked pane
-// first use the `shared keys`, then the `mode keys`, and finally the `option keys`
+// How the keybinding model works
+// Zellij is modal: at any instant exactly ONE input mode is active, and a key
+// press is looked up only in that mode's table. Three kinds of bindings exist,
+// and they are read in this order:
+//
+//   1. shared keys  -> written `Ctrl + g`, `Alt + h`, `Esc`, `Enter`.
+//                      Declared in `shared_among` / `shared_except` blocks and
+//                      apply to several modes at once.
+//   2. mode keys    -> written `Ctrl + p`, `Ctrl + t`, ...
+//                      The "entrypoint" key that switches you INTO a mode.
+//   3. option keys  -> written `c`, `s`, `x`, `left`, `tab`.
+//                      The single key that performs the action inside a mode.
+// A full chord is therefore: shared key -> mode key -> option key.
 
-// meaning:
-// first unlock the mode from `locked` to `normal`
-// then choose your mode, which is `pane`
-// and finally send the option key, which is `stacked`
+// Worked Example: create a stacked pane
+//   1. `Ctrl g`  - shared key: unlock `locked`, entering `normal` mode.
+//                  (pressing `Ctrl g` again re-locks, so it is a toggle)
+//   2. `p`       - mode key: switch from `normal` into `pane` mode.
+//   3. `s`       - option key: `NewPane "stacked"`, then back to `locked`.
+//
+//   Shorthand used throughout this file:  `Ctrl g , p , s`
 
-// example:
-// ctrl + g , p , s
-// press `ctrl + g` consecutively to unlock the mode to `normal`
-// then send `p` to set the mode to `pane`
-// and finally send `s`, the option key for a stacked pane
-// in comments, I write this as: `ctrl + g , p , s`
+// Why `locked` is the default mode
+// `default_mode "locked"` means Zellij starts with every keystroke passed
+// straight through to the program inside the pane. Nothing is intercepted
+// until you press `Ctrl g`. This is what makes Zellij safe to run inside vim,
+// htop, fzf, etc. - your normal keys are never swallowed by the multiplexer.
 
-// set to true, to use fresh keybinds
+// `keybinds clear-defaults=true` discards Zellij's built-in keymap so that
+// ONLY what is written below is active. That is why every mode you care about
+// must be spelled out explicitly here.
 keybinds clear-defaults=true {
 
-    // mode: locked
+    // MODE: locked  (the default mode - see `default_mode` at the bottom)
+    // The "do nothing" mode. Every key except the one below is forwarded to
+    // the focused pane. This is the resting state of the whole config.
+    // Entrypoint: `Ctrl g` from any other mode (see `shared_except` below).
+    // Exit:       `Ctrl g` -> `normal`.
     locked {
-        // key: `ctrl + g`
-        // switch to normal mode
+        // key: `Ctrl g`
+        // Unlock the multiplexer: leave `locked` and enter `normal`, from
+        // which the mode keys (`p`, `t`, `r`, `m`, `s`, `o`) become live.
+        // Pressing `Ctrl g` again from `normal` goes back to `locked`.
         bind "Ctrl g" {
             SwitchToMode "normal";
         }
     }
 
-    // mode: pane
+    // MODE: pane  (window/pane management)
+    // Everything about panes: focus, creation, closing, floating, fullscreen,
+    // stacking, pinning, renaming.
+    // Entrypoint: `Ctrl g , p`   (from normal / resize / tab / scroll / ...)
+    // Exit:       `Ctrl g , p , p` -> normal, or any action that ends with
+    //             `SwitchToMode "locked"` (most of them do).
     pane {
 
-        // key: `ctrl + g , p , left`
-        // move focus to left pane
+        // key: `Ctrl g , p , left`
+        // Move focus one pane to the left. Wraps/stops at the edge.
         bind "left" {
             MoveFocus "left";
         }
 
-        // key: `ctrl + g , p , down`
-        // move focus to down pane
+        // key: `Ctrl g , p , down`
+        // Move focus one pane down.
         bind "down" {
             MoveFocus "down";
         }
 
-        // key: `ctrl + g , p , up`
-        // move focus to up pane
+        // key: `Ctrl g , p , up`
+        // Move focus one pane up.
         bind "up" {
             MoveFocus "up";
         }
 
-        // key: `ctrl + g , p , right`
-        // move focus to right pane
+        // key: `Ctrl g , p , right`
+        // Move focus one pane to the right.
         bind "right" {
             MoveFocus "right";
         }
 
-        // key: `ctrl + g , p , ;`
-        // move focus to last opened pane
+        // key: `Ctrl g , p , ;`
+        // Jump back to the previously focused pane (like vim's `Ctrl-^`).
+        // Floating panes are taken into account, and if the current pane is
+        // fullscreen the two panes are swapped in place.
         bind ";" {
             FocusLastPane;
         }
 
-        // key: `ctrl + g , p , c`
-        // rename focused pane
+        // key: `Ctrl g , p , c`
+        // Rename the focused pane. Enters `renamepane` mode and opens the
+        // name input; `Esc` there undoes the rename.
         bind "c" {
             SwitchToMode "renamepane";
             PaneNameInput 0;
         }
 
-        // key: `ctrl + g , p , d`
-        // create new pane down and move focus
+        // key: `Ctrl g , p , d`
+        // Split the focused pane and open a new pane BELOW it, then re-lock.
         bind "d" {
             NewPane "down";
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , e`
-        // toggle pane to floating or embed
+        // key: `Ctrl g , p , e`
+        // Toggle the focused pane between embedded (tiled) and floating.
         bind "e" {
             TogglePaneEmbedOrFloating;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , f`
-        // toggle pane to fullscreen
+        // key: `Ctrl g , p , f`
+        // Toggle the focused pane fullscreen. The tab-bar and status-bar stay
+        // visible, so you keep the clock/tab list on screen.
         bind "f" {
             ToggleFocusFullscreen;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , shift + f`
-        // toggle pane to fullscreen but with no ui
+        // key: `Ctrl g , p , shift + f`
+        // Toggle the focused pane fullscreen with NO UI at all - the pane
+        // covers the space normally used by the tab-bar and status-bar.
+        // Useful for demos, screenshots, and distraction-free work.
         bind "Shift f" {
             ToggleFocusNoUiFullscreen;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , h`
-        // move focus to left pane
+        // key: `Ctrl g , p , h`
+        // vim-style alias for `left`.
         bind "h" {
             MoveFocus "left";
         }
 
-        // key: `ctrl + g , p , i`
-        // pin floating pane
+        // key: `Ctrl g , p , i`
+        // Pin the focused floating pane so it stays visible while you move
+        // focus around the tiled panes underneath it.
         bind "i" {
             TogglePanePinned;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , j`
-        // move focus to down pane
+        // key: `Ctrl g , p , j`
+        // vim-style alias for `down`.
         bind "j" {
             MoveFocus "down";
         }
 
-        // key: `ctrl + g , p , k`
-        // move focus to up pane
+        // key: `Ctrl g , p , k`
+        // vim-style alias for `up`.
         bind "k" {
             MoveFocus "up";
         }
 
-        // key: `ctrl + g , p , l`
-        // move focus to right pane
+        // key: `Ctrl g , p , l`
+        // vim-style alias for `right`.
         bind "l" {
             MoveFocus "right";
         }
 
-        // key: `ctrl + g , p , n`
-        // create new pane
+        // key: `Ctrl g , p , n`
+        // Open a new pane using the default split direction (right), then
+        // re-lock so you can start typing in it immediately.
         bind "n" {
             NewPane;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p`
-        // switch to pane mode (entrypoint)
+        // key: `Ctrl g , p , p`
+        // NOTE: this is the mode's own exit key. It returns to `normal`
+        // Because `p` is the entrypoint from `normal`, `p` acts as a toggle.
         bind "p" {
             SwitchToMode "normal";
         }
 
-        // key: `ctrl + g , p , r`
-        // create new pane to right
+        // key: `Ctrl g , p , r`
+        // Split the focused pane and open a new pane to the RIGHT of it.
         bind "r" {
             NewPane "right";
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , s`
-        // create new stacked pane
+        // key: `Ctrl g , p , s`
+        // Create a STACKED pane: panes stack on top of each other in the same
+        // screen area, with only the title bar of the inactive ones showing.
+        // This is the example used in the header comment.
         bind "s" {
             NewPane "stacked";
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , w`
-        // toggle inbuilt floating pane
+        // key: `Ctrl g , p , w`
+        // Toggle visibility of ALL floating panes in the current tab.
         bind "w" {
             ToggleFloatingPanes;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , x`
-        // close focused pane
+        // key: `Ctrl g , p , x`
+        // Close the focused pane. If it is the last pane in the tab, the tab
+        // closes too.
         bind "x" {
             CloseFocus;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , z`
-        // toggle pane frames
+        // key: `Ctrl g , p , z`
+        // Toggle pane frames (the title line / border drawn around panes).
+        // Handy when you want a clean, borderless screen.
         bind "z" {
             TogglePaneFrames;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , p , tab`
-        // switch focused to closest pane
-        bind "tab" {
-            SwitchFocus;
-        }
+        // key: `Ctrl g , p , tab`
+        // Cycle focus to the next pane in Zellij's internal pane order.
+        // NOTE: `SwitchFocus` is legacy; `FocusNextPane` / `FocusPreviousPane`
+        // are the modern equivalents (see recommendations below).
+        // bind "tab" {
+        //     SwitchFocus;
+        // }
     }
 
-    // mode: tab
+    // MODE: tab  (tab management)
+    // Everything about tabs: switching, creating, closing, renaming, moving a
+    // pane out into its own tab, and syncing input across panes.
+    // Entrypoint: `Ctrl g , t`
+    // Exit:       `Ctrl g , t , t` -> normal, or any action ending in
+    //             `SwitchToMode "locked"`.
     tab {
 
-         // key: `ctrl + g , t , left`
-         // switch to previous tab
+        // key: `Ctrl g , t , left`
+        // Go to the previous tab (wraps around).
         bind "left" {
             GoToPreviousTab;
         }
 
-        // key: `ctrl + g , t , down`
-        // switch to next tab
+        // key: `Ctrl g , t , down`
+        // Go to the next tab (wraps around).
         bind "down" {
             GoToNextTab;
         }
 
-        // key: `ctrl + g , t , up`
-        // switch to previous tab
+        // key: `Ctrl g , t , up`
+        // Go to the previous tab.
         bind "up" {
             GoToPreviousTab;
         }
 
-        // key: `ctrl + g , t , right`
-        // switch to next tab
+        // key: `Ctrl g , t , right`
+        // Go to the next tab.
         bind "right" {
             GoToNextTab;
         }
 
-        // key: `ctrl + g , t , 1`
-        // switch to tab no. 1
+        // key: `Ctrl g , t , 1`
+        // Jump straight to tab 1, then re-lock.
         bind "1" {
             GoToTab 1;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 2`
-        // switch to tab no. 2
+        // key: `Ctrl g , t , 2`
+        // Jump straight to tab 2, then re-lock.
         bind "2" {
             GoToTab 2;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 3`
-        // switch to tab no. 3
+        // key: `Ctrl g , t , 3`
+        // Jump straight to tab 3, then re-lock.
         bind "3" {
             GoToTab 3;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 4`
-        // switch to tab no. 4
+        // key: `Ctrl g , t , 4`
+        // Jump straight to tab 4, then re-lock.
         bind "4" {
             GoToTab 4;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 5`
-        // switch to tab no. 5
+        // key: `Ctrl g , t , 5`
+        // Jump straight to tab 5, then re-lock.
         bind "5" {
             GoToTab 5;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 6`
-        // switch to tab no. 6
+        // key: `Ctrl g , t , 6`
+        // Jump straight to tab 6, then re-lock.
         bind "6" {
             GoToTab 6;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 7`
-        // switch to tab no. 7
+        // key: `Ctrl g , t , 7`
+        // Jump straight to tab 7, then re-lock.
         bind "7" {
             GoToTab 7;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 8`
-        // switch to tab no. 8
+        // key: `Ctrl g , t , 8`
+        // Jump straight to tab 8, then re-lock.
         bind "8" {
             GoToTab 8;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , 9`
-        // switch to tab no. 9
+        // key: `Ctrl g , t , 9`
+        // Jump straight to tab 9, then re-lock.
         bind "9" {
             GoToTab 9;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , [`
-        // break focused pane to new tab in left
+        // key: `Ctrl g , t , [`
+        // Break the focused pane out of this tab into a NEW tab placed to the
+        // LEFT of the current one.
         bind "[" {
             BreakPaneLeft;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , ]`
-        // break focused pane to new tab in right
+        // key: `Ctrl g , t , ]`
+        // Break the focused pane out into a NEW tab placed to the RIGHT.
         bind "]" {
             BreakPaneRight;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , b`
-        // break focused pane to new tab
+        // key: `Ctrl g , t , b`
+        // Break the focused pane out into a new tab (default position).
         bind "b" {
             BreakPane;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , h`
-        // move focus to previous tab
+        // key: `Ctrl g , t , h`
+        // vim-style alias for "previous tab".
         bind "h" {
             GoToPreviousTab;
         }
 
-        // key: `ctrl + g , t , j`
-        // move focus to next tab
+        // key: `Ctrl g , t , j`
+        // vim-style alias for "next tab".
         bind "j" {
             GoToNextTab;
         }
 
-        // key: `ctrl + g , t , k`
-        // move focus to previous tab
+        // key: `Ctrl g , t , k`
+        // vim-style alias for "previous tab".
         bind "k" {
             GoToPreviousTab;
         }
 
-        // key: `ctrl + g , t , l`
-        // move focus to next tab
+        // key: `Ctrl g , t , l`
+        // vim-style alias for "next tab".
         bind "l" {
             GoToNextTab;
         }
 
-        // key: `ctrl + g , t , n`
-        // create a new tab
+        // key: `Ctrl g , t , n`
+        // Create a new tab (it inherits the default layout) and re-lock.
         bind "n" {
             NewTab;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , r`
-        // rename active tab
+        // key: `Ctrl g , t , r`
+        // Rename the active tab. Enters `renametab` mode and opens the input;
+        // `Esc` there undoes the rename.
         bind "r" {
             SwitchToMode "renametab";
             TabNameInput 0;
         }
 
-        // key: `ctrl + g , t , s`
-        // toggle input sync between panes in active tab
+        // key: `Ctrl g , t , s`
+        // Toggle input sync: while ON, whatever you type is broadcast to every
+        // pane in this tab at once. Great for running the same command on
+        // several hosts; dangerous if you forget it is on.
         bind "s" {
             ToggleActiveSyncTab;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , t`
-        // switch to tab mode (entrypoint)
+        // key: `Ctrl g , t , t`
+        // NOTE: this is the mode's own exit key - it returns to `normal`
         bind "t" {
             SwitchToMode "normal";
         }
 
-        // key: `ctrl + g , t , x`
-        // close active tab
+        // key: `Ctrl g , t , x`
+        // Close the active tab and all panes inside it.
         bind "x" {
             CloseTab;
             SwitchToMode "locked";
         }
 
-        // key: `ctrl + g , t , tab`
-        // change the tab focus
+        // key: `Ctrl g , t , tab`
+        // Toggle between the current tab and the previously active one.
         bind "tab" {
             ToggleTab;
         }
     }
 
-    // mode: resize
+    // MODE: resize  (change pane dimensions)
+    // Each press nudges the focused pane's edge by one cell in the given
+    // direction. Lowercase = grow, uppercase = shrink.
+    // Entrypoint: `Ctrl g , r`
+    // Exit:       `Ctrl g , r , r` -> normal.
     resize {
 
-        // key: `ctrl + g , r , left`
-        // increase size in left direction
+        // key: `Ctrl g , r , left`
+        // Grow the pane by moving its LEFT edge further left.
         bind "left" {
             Resize "Increase left";
         }
 
-        // key: `ctrl + g , r , down`
-        // increase size in down direction
+        // key: `Ctrl g , r , down`
+        // Grow the pane by moving its BOTTOM edge further down.
         bind "down" {
             Resize "Increase down";
         }
 
-        // key: `ctrl + g , r , up`
-        // increase size in up direction
+        // key: `Ctrl g , r , up`
+        // Grow the pane by moving its TOP edge further up.
         bind "up" {
             Resize "Increase up";
         }
 
-        // key: `ctrl + g , r , right`
-        // increase size in right direction
+        // key: `Ctrl g , r , right`
+        // Grow the pane by moving its RIGHT edge further right.
         bind "right" {
             Resize "Increase right";
         }
 
-        // key: `ctrl + g , r , +`
-        // increase size
+        // key: `Ctrl g , r , +`
+        // Grow the pane in its "natural" direction (no direction argument).
         bind "+" {
             Resize "Increase";
         }
 
-        // key: `ctrl + g , r , -`
-        // decrease size
+        // key: `Ctrl g , r , -`
+        // Shrink the pane in its "natural" direction.
         bind "-" {
             Resize "Decrease";
         }
 
-        // key: `ctrl + g , r , H`
-        // decrease size in left direction
+        // key: `Ctrl g , r , H`
+        // Shrink by pulling the LEFT edge right.
         bind "H" {
             Resize "Decrease left";
         }
 
-        // key: `ctrl + g , r , J`
-        // decrease size in down direction
+        // key: `Ctrl g , r , J`
+        // Shrink by pulling the BOTTOM edge up.
         bind "J" {
             Resize "Decrease down";
         }
 
-        // key: `ctrl + g , r , K`
-        // decrease size in up direction
+        // key: `Ctrl g , r , K`
+        // Shrink by pulling the TOP edge down.
         bind "K" {
             Resize "Decrease up";
         }
 
-        // key: `ctrl + g , r , L`
-        // decrease size in right direction
+        // key: `Ctrl g , r , L`
+        // Shrink by pulling the RIGHT edge left.
         bind "L" {
             Resize "Decrease right";
         }
 
-        // key: `ctrl + g , r , h`
-        // increase size in left direction
+        // key: `Ctrl g , r , h`
+        // vim-style alias for "increase left".
         bind "h" {
             Resize "Increase left";
         }
 
-        // key: `ctrl + g , r , j`
-        // increase size in down direction
+        // key: `Ctrl g , r , j`
+        // vim-style alias for "increase down".
         bind "j" {
             Resize "Increase down";
         }
 
-        // key: `ctrl + g , r , k`
-        // increase size in up direction
+        // key: `Ctrl g , r , k`
+        // vim-style alias for "increase up".
         bind "k" {
             Resize "Increase up";
         }
 
-        // key: `ctrl + g , r , l`
-        // increase size in right direction
+        // key: `Ctrl g , r , l`
+        // vim-style alias for "increase right".
         bind "l" {
             Resize "Increase right";
         }
 
-        // key: `ctrl + g , r`
-        // switch to resize mode (entrypoint)
+        // key: `Ctrl g , r , r`
+        // NOTE: mode exit key - returns to `normal`
+        // `r` therefore toggles resize mode on/off.
         bind "r" {
             SwitchToMode "normal";
         }
     }
 
-    // mode: move
+    // MODE: move  (reposition panes within the layout)
+    // Unlike `resize`, this changes the ORDER/position of panes, not their
+    // size. Useful for rearranging a layout without closing anything.
+    // Entrypoint: `Ctrl g , m`
+    // Exit:       `Ctrl g , m , m` -> normal.
     move {
 
-        // key: `ctrl + g , m , left`
-        // move pane in left direction
+        // key: `Ctrl g , m , left`
+        // Swap the focused pane with its left neighbour.
         bind "left" {
             MovePane "left";
         }
 
-        // key: `ctrl + g , m , down`
-        // move pane in down direction
+        // key: `Ctrl g , m , down`
+        // Swap the focused pane with its lower neighbour.
         bind "down" {
             MovePane "down";
         }
 
-        // key: `ctrl + g , m , up`
-        // move pane in up direction
+        // key: `Ctrl g , m , up`
+        // Swap the focused pane with its upper neighbour.
         bind "up" {
             MovePane "up";
         }
 
-        // key: `ctrl + g , m , right`
-        // move pane in right direction
+        // key: `Ctrl g , m , right`
+        // Swap the focused pane with its right neighbour.
         bind "right" {
             MovePane "right";
         }
 
-        // key: `ctrl + g , m , h`
-        // move pane in left direction
+        // key: `Ctrl g , m , h`
+        // vim-style alias for "move left".
         bind "h" {
             MovePane "left";
         }
 
-        // key: `ctrl + g , m , j`
-        // move pane in down direction
+        // key: `Ctrl g , m , j`
+        // vim-style alias for "move down".
         bind "j" {
             MovePane "down";
         }
 
-        // key: `ctrl + g , m , k`
-        // move pane in up direction
+        // key: `Ctrl g , m , k`
+        // vim-style alias for "move up".
         bind "k" {
             MovePane "up";
         }
 
-        // key: `ctrl + g , m , l`
-        // move pane in right direction
+        // key: `Ctrl g , m , l`
+        // vim-style alias for "move right".
         bind "l" {
             MovePane "right";
         }
 
-        // key: `ctrl + g , m`
-        // switch to move mode (entrypoint)
+        // key: `Ctrl g , m , m`
+        // NOTE: mode exit key - returns to `normal`
+        // `m` therefore toggles move mode on/off.
         bind "m" {
             SwitchToMode "normal";
         }
 
-        // key: `ctrl + g , m , n`
-        // move focused pane
+        // key: `Ctrl g , m , n`
+        // Move the focused pane one step forward in the pane order.
         bind "n" {
             MovePane;
         }
 
-        // key: `ctrl + g , m , p`
-        // move pane in back direction
+        // key: `Ctrl g , m , p`
+        // Move the focused pane one step BACKWARD in the pane order.
         bind "p" {
             MovePaneBackwards;
         }
 
-        // key: `ctrl + g , m , tab`
-        // move focused pane
+        // key: `Ctrl g , m , tab`
+        // Same as `n`: step the focused pane forward.
         bind "tab" {
             MovePane;
         }
     }
 
-    // unknown mode for me
-    // i will add this section later
+    // MODE: scroll  (read the scrollback buffer)
+    // Lets you page through a pane's history without touching the program
+    // running inside it. Also the gateway to search and to the scrollback
+    // editor.
+    // Entrypoint: `Ctrl g , s`   (from normal / resize / search / move / ...)
+    // Exit:       `Ctrl g , s , s` -> normal, or `Esc` -> locked.
+    //
+    // NOTE: this block is the least finished part of the config - it has no
+    // `Ctrl s` exit and its exit key is inconsistent with the other modes.
     scroll {
 
+        // key: `Ctrl g , s , Alt left`
+        // Move focus left, or go to the previous tab if already at the edge.
         bind "Alt left" {
             MoveFocusOrTab "left";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt down`
+        // Move focus down, then re-lock.
         bind "Alt down" {
             MoveFocus "down";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt up`
+        // Move focus up, then re-lock.
         bind "Alt up" {
             MoveFocus "up";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt right`
+        // Move focus right, or go to the next tab if already at the edge.
         bind "Alt right" {
             MoveFocusOrTab "right";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , c`
+        // Copy the output of the last command run in this pane to the system
+        // clipboard. Requires the shell to emit OSC 133 shell-integration
+        // sequences; the copied region is briefly flashed on screen.
         bind "c" {
             CopyLastCommandOutput;
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , e`
+        // Open the pane's scrollback in `$scrollback_editor` (nvim, see the
+        // options at the bottom of this file) for real searching/copying.
         bind "e" {
             EditScrollback;
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , f`
+        // Enter search mode and open the search input.
         bind "f" {
             SwitchToMode "entersearch";
             SearchInput 0;
         }
 
+        // key: `Ctrl g , s , Alt h`
+        // vim-style alias for "focus left / previous tab".
         bind "Alt h" {
             MoveFocusOrTab "left";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt j`
+        // vim-style alias for "focus down".
         bind "Alt j" {
             MoveFocus "down";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt k`
+        // vim-style alias for "focus up".
         bind "Alt k" {
             MoveFocus "up";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , Alt l`
+        // vim-style alias for "focus right / next tab".
         bind "Alt l" {
             MoveFocusOrTab "right";
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , s , s`
+        // NOTE: mode exit key - returns to `normal`
+        // `s` therefore toggles scroll mode on/off.
         bind "s" {
             SwitchToMode "normal";
         }
     }
 
-    // mode: search
+    // MODE: search  (find text in the scrollback)
+    // Reached from `scroll` via `f` (which goes through `entersearch` first).
+    // Entrypoint: `Ctrl g , s , f` then type the query and press Enter.
+    // Exit:       `Esc` -> locked (via the shared binding below).
     search {
 
-        // key: `ctrl + g , s , c`
-        // toggle CaseSensitivity option
+        // key: `Ctrl g , s , f , <query> , Enter , c`
+        // Toggle case-sensitive matching.
         bind "c" {
             SearchToggleOption "CaseSensitivity";
         }
 
-        // key: `ctrl + g , s , n`
-        // search next/down occur
+        // key: `Ctrl g , s , f , <query> , Enter , n`
+        // Jump to the next match, downwards.
         bind "n" {
             Search "down";
         }
 
-        // key: `ctrl + g , s , o`
-        // search whole word
+        // key: `Ctrl g , s , f , <query> , Enter , o`
+        // Toggle whole-word matching.
         bind "o" {
             SearchToggleOption "WholeWord";
         }
 
-        // key: `ctrl + g , s , p`
-        // search previous/up occur
+        // key: `Ctrl g , s , f , <query> , Enter , p`
+        // Jump to the previous match, upwards.
         bind "p" {
             Search "up";
         }
 
-        // key: `ctrl + g , s , w`
-        // toggle search wrap
+        // key: `Ctrl g , s , f , <query> , Enter , w`
+        // Toggle wrap-around: whether searching past the end continues from
+        // the beginning.
         bind "w" {
             SearchToggleOption "Wrap";
         }
     }
 
+    // MODE: session  (whole-session operations)
+    // Session-level things: detaching, nested sessions, and the built-in
+    // session-manager / layout-manager plugins.
+    // Entrypoint: `Ctrl g , o`
+    // Exit:       `Ctrl g , o , o` -> normal.
     session {
+
+        // key: `Ctrl g , o , [`
+        // When the focused pane holds a NESTED zellij session, descend into
+        // it: keyboard and mouse input go to the inner session and the outer
+        // session's chrome is dimmed.
         bind "[" {
             FocusGuestSession;
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , o , ]`
+        // From inside a nested session, hand focus back to the OUTER session.
         bind "]" {
             FocusHostSession;
             SwitchToMode "locked";
         }
 
+        // bind "a" {
+        //     LaunchOrFocusPlugin "zellij:about" {
+        //         floating true
+        //         move_to_focused_tab true
+        //     }
+        //     SwitchToMode "locked"
+        // }
+
+        // bind "c" {
+        //     LaunchOrFocusPlugin "configuration" {
+        //         floating true
+        //         move_to_focused_tab true
+        //     }
+        //     SwitchToMode "locked"
+        // }
+
+        // key: `Ctrl g , o , d`
+        // Detach: leave the session running in the background and return to
+        // the shell. Reattach later with `zellij attach main`.
         bind "d" {
             Detach;
         }
 
+        // key: `Ctrl g , o , f`
+        // When nested, toggle whether THIS session's pane is fullscreen
+        // inside the host (outer) session.
         bind "f" {
             ToggleHostFullscreen;
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl g , o , l`
+        // Open the built-in layout-manager plugin as a floating pane, moved
+        // into the currently focused tab.
         bind "l" {
             LaunchOrFocusPlugin "zellij:layout-manager" {
                 floating true
@@ -663,10 +794,32 @@ keybinds clear-defaults=true {
             SwitchToMode "locked"
         }
 
+        // key: `Ctrl g , o , o`
+        // NOTE: mode exit key - returns to `normal`
+        // `o` therefore toggles session mode on/off.
         bind "o" {
             SwitchToMode "normal";
         }
 
+        // bind "p" {
+        //     LaunchOrFocusPlugin "plugin-manager" {
+        //         floating true
+        //         move_to_focused_tab true
+        //     }
+        //     SwitchToMode "locked"
+        // }
+
+        // bind "s" {
+        //     LaunchOrFocusPlugin "zellij:share" {
+        //         floating true
+        //         move_to_focused_tab true
+        //     }
+        //     SwitchToMode "locked"
+        // }
+
+        // key: `Ctrl g , o , w`
+        // Open the built-in session-manager plugin as a floating pane: list,
+        // switch between, and kill sessions.
         bind "w" {
             LaunchOrFocusPlugin "session-manager" {
                 floating true
@@ -676,240 +829,417 @@ keybinds clear-defaults=true {
         }
     }
 
+    // SHARED: normal + locked  (always-available Alt chords)
+    // These work in BOTH the resting mode and the unlocked mode, so you can
+    // use them without first pressing `Ctrl g`. This is the "fast path" for
+    // the most common operations.
     shared_among "normal" "locked" {
+
+        // key: `Alt left`
+        // Focus left, or previous tab if already at the left edge.
         bind "Alt left" {
             MoveFocusOrTab "left";
         }
 
+        // key: `Alt down`
+        // Focus the pane below.
         bind "Alt down" {
             MoveFocus "down";
         }
 
+        // key: `Alt up`
+        // Focus the pane above.
         bind "Alt up" {
             MoveFocus "up";
         }
 
+        // key: `Alt right`
+        // Focus right, or next tab if already at the right edge.
         bind "Alt right" {
             MoveFocusOrTab "right";
         }
 
+        // key: `Alt +`
+        // Grow the focused pane.
         bind "Alt +" {
             Resize "Increase";
         }
 
+        // key: `Alt -`
+        // Shrink the focused pane.
         bind "Alt -" {
             Resize "Decrease";
         }
 
+        // key: `Alt [`
+        // Apply the previous swap layout (a named layout you can cycle
+        // through without losing your panes).
         bind "Alt [" {
             PreviousSwapLayout;
         }
 
+        // key: `Alt ]`
+        // Apply the next swap layout.
         bind "Alt ]" {
             NextSwapLayout;
         }
 
+        // key: `Alt f`
+        // Show/hide all floating panes.
         bind "Alt f" {
             ToggleFloatingPanes;
         }
 
+        // key: `Alt h`
+        // vim-style alias for "focus left / previous tab".
         bind "Alt h" {
             MoveFocusOrTab "left";
         }
 
+        // key: `Alt i`
+        // Move the current tab one position to the LEFT in the tab bar.
         bind "Alt i" {
             MoveTab "left";
         }
 
+        // key: `Alt j`
+        // vim-style alias for "focus down".
         bind "Alt j" {
             MoveFocus "down";
         }
 
+        // key: `Alt k`
+        // vim-style alias for "focus up".
         bind "Alt k" {
             MoveFocus "up";
         }
 
+        // key: `Alt l`
+        // vim-style alias for "focus right / next tab".
         bind "Alt l" {
             MoveFocusOrTab "right";
         }
 
+        // key: `Alt n`
+        // Open a new pane without leaving the current mode.
         bind "Alt n" {
             NewPane;
         }
 
+        // key: `Alt o`
+        // Move the current tab one position to the RIGHT in the tab bar.
         bind "Alt o" {
             MoveTab "right";
         }
 
+        // key: `Alt p`
+        // Add/remove the focused pane from the current pane group.
         bind "Alt p" {
             TogglePaneInGroup;
         }
 
+        // key: `Alt Shift p`
+        // Toggle group marking: while ON, panes you focus are added to a
+        // group, which can then be moved/closed together.
         bind "Alt Shift p" {
             ToggleGroupMarking;
         }
     }
 
+    // SHARED: re-lock and quit
+    // Available in every mode EXCEPT `locked` (where `Ctrl g` unlocks instead)
+    // and the two rename modes (where `Ctrl c` cancels the rename).
     shared_except "locked" "renametab" "renamepane" {
+
+        // key: `Ctrl g`
+        // Re-lock the multiplexer: hand all keys back to the focused pane.
+        // This is the counterpart to the `locked` binding at the top.
         bind "Ctrl g" {
             SwitchToMode "locked";
         }
 
+        // key: `Ctrl q`
+        // Quit Zellij. With `on_force_close "detach"` (see options below),
+        // the session survives and can be reattached.
         bind "Ctrl q" {
             Quit;
         }
     }
 
+    // SHARED: Enter = confirm and re-lock
+    // Pressing Enter in any unlocked mode commits the current action and
+    // returns to `locked`.
+
+    // NOTE: the exclusion list here is missing "renametab" and "renamepane".
+    // Zellij's own default config excludes them, because Enter is what
+    // COMMITS a tab/pane rename - intercepting it here can break renaming.
     shared_except "locked" "entersearch" {
+
+        // key: `Enter`
+        // Confirm and re-lock.
         bind "enter" {
             SwitchToMode "locked";
         }
     }
 
+    // SHARED: Esc = cancel and re-lock
+    // The universal "get me out of here" key. Excluded from `entersearch`
+    // (where Esc returns to `scroll`) and from the rename modes (where Esc
+    // undoes the rename).
     shared_except "locked" "entersearch" "renametab" "renamepane" {
+
+        // key: `Esc`
+        // Abandon whatever mode you are in and re-lock.
         bind "esc" {
             SwitchToMode "locked";
         }
     }
 
+    // SHARED: `o` -> session mode
+    // Excluded from `locked` (nothing is bound there), from `entersearch`
+    // (Esc/Ctrl-c handle it), from the rename modes, and from `session`
+    // itself (where `o` is the exit key).
     shared_except "locked" "entersearch" "search" "renametab" "renamepane" "session" {
+
+        // key: `o`
+        // Enter session mode.
         bind "o" {
             SwitchToMode "session";
         }
     }
 
+    // SHARED: `m` -> move mode
+    // Excluded from `scroll` (where `m` selects the command at the scroll
+    // position) and from `move` itself (where `m` is the exit key).
     shared_except "locked" "scroll" "entersearch" "search" "renametab" "renamepane" "move" {
+
+        // key: `m`
+        // Enter move mode.
         bind "m" {
             SwitchToMode "move";
         }
     }
 
+    // SHARED: `t` -> tab mode
+    // Excluded from `tab` itself (where `t` is the exit key).
     shared_except "locked" "tab" "entersearch" "renametab" "renamepane" {
+
+        // key: `t`
+        // Enter tab mode.
         bind "t" {
             SwitchToMode "tab";
         }
     }
 
+    // SHARED: `p` -> pane mode
+    // Deliberately NOT available from `search` (where `p` means "previous
+    // match") or from `move` (where `p` means "move pane backwards").
     shared_among "normal" "resize" "tab" "scroll" "prompt" "tmux" {
+
+        // key: `p`
+        // Enter pane mode.
         bind "p" {
             SwitchToMode "pane";
         }
     }
 
+    // SHARED: `s` -> scroll mode
+    // Deliberately NOT available from `scroll` itself (where `s` is the exit
+    // key) or from `tab` (where `s` toggles input sync).
     shared_among "normal" "resize" "search" "move" "prompt" "tmux" {
+
+        // key: `s`
+        // Enter scroll mode.
         bind "s" {
             SwitchToMode "scroll";
         }
     }
 
+    // SHARED: `r` -> resize mode
+    // Excluded from `resize` itself (where `r` is the exit key), from `pane`
+    // and `tab` (where `r` means "new pane right" / "rename tab"), and from
+    // the search/rename modes.
     shared_except "locked" "resize" "pane" "tab" "entersearch" "renametab" "renamepane" {
+
+        // key: `r`
+        // Enter resize mode.
         bind "r" {
             SwitchToMode "resize";
         }
     }
 
+    // SHARED: scrolling keys, active in both `scroll` and `search`
+    // Defined once here so that you can keep scrolling while a search is
+    // active, without leaving search mode.
     shared_among "scroll" "search" {
+
+        // key: `PageDown`
+        // Scroll down by one full screen.
         bind "PageDown" {
             PageScrollDown;
         }
 
+        // key: `PageUp`
+        // Scroll up by one full screen.
         bind "PageUp" {
             PageScrollUp;
         }
 
+        // key: `left`
+        // Page up (horizontal arrows are repurposed for paging).
         bind "left" {
             PageScrollUp;
         }
 
+        // key: `down`
+        // Scroll down a single line.
         bind "down" {
             ScrollDown;
         }
 
+        // key: `up`
+        // Scroll up a single line.
         bind "up" {
             ScrollUp;
         }
 
+        // key: `right`
+        // Page down.
         bind "right" {
             PageScrollDown;
         }
 
+        // key: `[`
+        // Jump to the previous shell prompt in the scrollback. Requires shell
+        // integration (OSC 133) to know where prompts are.
         bind "[" {
             ScrollToPreviousPrompt;
         }
 
+        // key: `]`
+        // Jump to the next shell prompt in the scrollback.
         bind "]" {
             ScrollToNextPrompt;
         }
 
+        // key: `Ctrl b`
+        // Page up (tmux-style alias).
         bind "Ctrl b" {
             PageScrollUp;
         }
 
+        // key: `Ctrl c`
+        // Jump to the very bottom of the scrollback and re-lock.
+        // NOTE: this exits to `locked`, while `s` exits to `normal` - the two
+        // exits from scroll mode are inconsistent.
         bind "Ctrl c" {
             ScrollToBottom;
             SwitchToMode "locked";
         }
+
+        // key: `d`
+        // Scroll down half a screen.
         bind "d" {
             HalfPageScrollDown;
         }
 
+        // key: `Ctrl f`
+        // Page down (tmux-style alias).
         bind "Ctrl f" {
             PageScrollDown;
         }
 
+        // key: `h`
+        // vim-style alias for "page up".
         bind "h" {
             PageScrollUp;
         }
 
+        // key: `j`
+        // vim-style alias for "scroll down one line".
         bind "j" {
             ScrollDown;
         }
 
+        // key: `k`
+        // vim-style alias for "scroll up one line".
         bind "k" {
             ScrollUp;
         }
 
+        // key: `l`
+        // vim-style alias for "page down".
         bind "l" {
             PageScrollDown;
         }
 
+        // key: `m`
+        // Select the whole command whose output is at the current scroll
+        // position (needs shell integration). Combine with `c` to copy it.
         bind "m" {
             SelectCommandAtScrollPosition;
         }
 
+        // key: `u`
+        // Scroll up half a screen.
         bind "u" {
             HalfPageScrollUp;
         }
     }
 
+    // MODE: entersearch  (the one-keystroke gateway into `search`)
+    // A tiny intermediate mode whose only job is to open the search input.
+    // Entered from `scroll` with `f`.
     entersearch {
+
+        // key: `Ctrl c`
+        // Abort and go back to `scroll`.
         bind "Ctrl c" {
             SwitchToMode "scroll";
         }
 
+        // key: `Esc`
+        // Abort and go back to `scroll`.
         bind "esc" {
             SwitchToMode "scroll";
         }
 
+        // key: `Enter`
+        // Confirm the query and enter `search` mode proper.
         bind "enter" {
             SwitchToMode "search";
         }
     }
 
+    // MODE: renametab  (inline tab-name editor)
+    // Entered from `Ctrl g , t , r`. The input itself is handled by Zellij's
+    // UI; only the cancel path is bound here.
     renametab {
+
+        // key: `Esc`
+        // Undo the rename and go back to `tab` mode.
         bind "esc" {
             UndoRenameTab;
             SwitchToMode "tab";
         }
     }
 
+    // SHARED: cancel a rename from either rename mode
     shared_among "renametab" "renamepane" {
+
+        // key: `Ctrl c`
+        // Abandon the rename entirely and re-lock.
         bind "Ctrl c" {
             SwitchToMode "locked";
         }
     }
 
+    // MODE: renamepane  (inline pane-name editor)
+    // Entered from `Ctrl g , p , c`.
     renamepane {
+
+        // key: `Esc`
+        // Undo the rename and go back to `pane` mode.
         bind "esc" {
             UndoRenamePane;
             SwitchToMode "pane";
@@ -917,35 +1247,188 @@ keybinds clear-defaults=true {
     }
 }
 
+// Plugins
+// Plugins are WASM modules. `zellij:` prefixed locations are the ones shipped
+// with Zellij itself. Declaring them here gives them a stable name you can
+// reference from `LaunchOrFocusPlugin` (see session mode above).
 plugins {
+
+    // about location="zellij:about"
+    // compact-bar location="zellij:compact-bar"
+    // configuration location="zellij:configuration"
+    // filepicker location="zellij:strider" {
+    //     cwd "/"
+    // }
+
+    // plugin-manager location="zellij:plugin-manager"
     session-manager location="zellij:session-manager"
     status-bar location="zellij:status-bar"
+    // strider location="zellij:strider"
+    tab-bar location="zellij:tab-bar"
+    // welcome-screen location="zellij:session-manager" {
+    //     welcome_screen true
+    // }
+
+    // The session switcher opened with `Ctrl g , o , w`.
+    session-manager location="zellij:session-manager"
+
+    // The bottom bar showing mode, hints, and the current session name.
+    status-bar location="zellij:status-bar"
+
+    // The top bar listing tabs.
     tab-bar location="zellij:tab-bar"
 }
 
+// Plugins to load in the background when a new session starts
+// eg. "file:/path/to/my-plugin.wasm"
+// eg. "https://example.com/my-plugin.wasm"
+// load_plugins {
+//     zellij:link
+// }
+
+// web_client {
+//     font "monospace"
+// }
+
+// Global Options
+// Colour scheme. `catppuccin-frappe` is one of the themes bundled with Zellij
+// (the family also includes latte, macchiato and mocha).
 theme "catppuccin-frappe"
+
+// or "light"; pins the hue, skips the wait-for-reply path
+explicit_theme_hue "dark"
+
+// Start in `locked` mode: keys go to the pane until you press `Ctrl g`.
+// Options: "normal" | "locked"
 default_mode "locked"
+
+// Shell used for new panes. `fish` must be on PATH.
 default_shell "fish"
+
+// Working directory for new panes/tabs. `~` is expanded.
 default_cwd "~/src/remote"
+
+// Layout applied to the first tab of a new session. Resolved against
+// `layout_dir` below, so this loads `~/.config/zellij/layouts/default.kdl (builtin)`.
 default_layout "default"
+
+// When you run `zellij` and a session already exists, attach to it instead of
+// creating a new one.
 attach_to_session true
+
+// What happens when the session is force-closed (e.g. the terminal window is
+// killed). "detach" keeps the session alive in the background; "quit" kills it.
+// Options: "quit" | "detach"
 on_force_close "detach"
+
+// Enable mouse support: click to focus, drag to resize, wheel to scroll.
 mouse_mode true
+
+// Draw frames around panes.
 pane_frames true
-pane_frame_styles "titles"
+
+// Style of those frames.
+// Options: "titles" (a single title line above each pane) | "full" (a full
+// border around each pane) | "none" (same as pane_frames false)
+pane_frame_style "titles"
+
+// Mirror the session to a second terminal attached to the same session.
 mirror_session false
-copy_on_select false
+
+// Choose what to do when zellij receives SIGTERM, SIGINT, SIGQUIT or SIGHUP
+// eg. when terminal window with an active zellij session is closed
+on_force_close "detach"
+
+// Copy to the clipboard as soon as a selection is finished (no Enter needed).
+copy_on_select true
+
+// How many lines of scrollback each pane keeps in memory.
 scroll_buffer_size 10000
+
+// Editor opened by `EditScrollback` (`Ctrl g , s , e`).
 scrollback_editor "/opt/homebrew/bin/nvim"
+
+// Persist sessions to disk so they can be resurrected after a reboot/crash.
 session_serialization true
+
+// Also serialize each pane's viewport (what is currently on screen), not just
+// the scrollback. Costs more disk space.
 serialize_pane_viewport false
-serialization_interval 10800
+
+// How often (in seconds) the session is serialized. 300 = 5min
+serialization_interval 300
+
+// Enable or disable the rendering of styled and colored underlines (undercurl).
+// May need to be disabled for certain unsupported terminals
+styled_underlines true
+
+// Do not show the "tips" panel on startup.
 show_startup_tips false
+
+// Do not show release notes after an upgrade.
 show_release_notes false
+
+// Focus a pane as soon as the mouse hovers over it, without clicking.
+// Default is false; true is convenient but can be jarring with fast mouse
+// movement across a busy layout.
 focus_follows_mouse true
+
+// Let a click that focuses a pane ALSO be delivered to the program inside it.
+// Combined with `focus_follows_mouse`, a single click can both focus and act.
 mouse_click_through true
+
+// Whether to let programs running inside panes read the paste buffer
+// (clipboard) with the OSC 52 escape sequence. When enabled, any program
+// in any pane - including one running on a remote machine over SSH - can
+// read the clipboard without the user being asked.
+dangerously_enable_paste_buffer_read false
+
+// Disable the built-in web server (no browser access to sessions).
 web_server false
+
+// Web sharing policy for the web client.
+// Options: "disabled" | "on" | "full"
 web_sharing "disabled"
+
+// Whether to stack panes when resizing beyond a certain size
+stacked_resize true
+
+// Whether stacked panes display as a list with the expanded pane pinned to the bottom
+stacked_pane_list true
+
+// Whether to enable mouse hover effects and pane grouping functionality
+advanced_mouse_actions true
+
+// Whether Ctrl+ScrollWheel resizes panes
+mouse_scroll_resize true
+
+// Whether scrolling a pane implicitly enters and exits Scroll mode
+scroll_mode_sync true
+
+// Whether to enable mouse hover visual effects (frame highlight and help text)
+mouse_hover_effects true
+
+// Whether to show mouse hover help-text tips (resize help and group shortcuts)
+mouse_hover_tips true
+
+// Whether to show visual bell indicators (pane/tab frame flash and [!] suffix)
+visual_bell true
+
+// Provide a command to execute when copying text. The text will be piped to
+// the stdin of the program to perform the copy. This can be used with
+// terminal emulators which do not support the OSC 52 ANSI control sequence
+// that will be used by default if this option is not set.
+copy_command "pbcopy"
+
+// Which clipboard to write to.
+// Options: "system" | "primary"
 copy_clipboard "system"
+
+// Name given to the session created by a bare `zellij` invocation.
 session_name "main"
+
+// Where `layout` and `zellij --layout <name>` look for layout files.
 layout_dir "~/.config/zellij/layouts"
+
+// Enable or disable support for the enhanced Kitty Keyboard Protocol (the host terminal must also support it)
+support_kitty_keyboard_protocol false
